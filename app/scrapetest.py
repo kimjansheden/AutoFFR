@@ -4,6 +4,14 @@ from selenium.webdriver.chrome.service import Service
 import gspread
 from google.oauth2.service_account import Credentials
 
+def column_name_to_index(column_name):
+    """Converts an alphanumeric column name to a numeric index."""
+    index = 0
+    for i, c in enumerate(reversed(column_name)):
+        index += (ord(c.upper()) - ord('A') + 1) * (26 ** i)
+    return index
+
+
 # Disable the browser window opening, i.e. enable headless mode
 options = webdriver.ChromeOptions()
 options.add_argument('--headless')
@@ -41,4 +49,6 @@ ss = client.open('Placeringar')
 Datatabell = ss.get_worksheet_by_id(338938079)
 
 # Write the extracted text to cell S27
-Datatabell.update_cell(27, 19, text)
+column = column_name_to_index('S')
+row = 27
+Datatabell.update_cell(row, column, text)
