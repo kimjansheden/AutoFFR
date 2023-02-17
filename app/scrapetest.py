@@ -32,12 +32,13 @@ finally:
     driver.quit()
 
 # Authenticate with Google Sheets
-creds_file = Credentials.from_service_account_file('./creds.json')
+creds_file = Credentials.from_service_account_file('./creds.json', scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'])
+print(creds_file.has_scopes("https://www.googleapis.com/auth/spreadsheets"))
 client = gspread.authorize(creds_file)
 
 # Open the sheet and get the first worksheet
 ss = client.open('Placeringar')
 Datatabell = ss.get_worksheet_by_id(338938079)
 
-# Write the extracted text to cell A1
+# Write the extracted text to cell S27
 Datatabell.update_cell(27, 19, text)
