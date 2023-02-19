@@ -60,6 +60,8 @@ class Helper:
         # Write the updated config to the config file.
         with open("config.ini", "w") as f:
             self.config.write(f)
+        
+        print("LaunchAgent setup was successful.")
 
 
 
