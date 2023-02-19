@@ -46,16 +46,21 @@ class Helper:
             </plist>
             """)
 
-        # Copy the .plist file to the LaunchAgents directory.
+        # Move the .plist file to the LaunchAgents directory.
         launch_agents_dir = os.path.expanduser("~/Library/LaunchAgents")
-        dest_path = os.path.join(launch_agents_dir, plist_path)
+        dest_path = os.path.join(launch_agents_dir, f"{label}.plist")
         shutil.move(plist_path, dest_path)
 
         # Load the LaunchAgent.
         os.system(f"launchctl load {dest_path}")
 
-        # Tell the config file that a LaunchAgent has been created.
+        # Update the config object.
         self.config["LaunchAgent"]["exists"] = "True"
+
+        # Write the updated config to the config file.
+        with open("config.ini", "w") as f:
+            self.config.write(f)
+
 
 
 
