@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 import gspread
 from google.oauth2.service_account import Credentials
+import configparser
 from helpers import column_name_to_index, Helper
 
 # Program
@@ -67,9 +68,16 @@ class GetPrices:
         creds_file = Credentials.from_service_account_file('./creds.json', scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'])
         client = gspread.authorize(creds_file)
 
+        # Read the configuration file
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+
+        # Get the worksheet ID from the configuration file
+        worksheet_id = int(config['Google']['worksheet_id'])
+
         # Open the sheet and get the first worksheet
         ss = client.open('Placeringar')
-        Datatabell = ss.get_worksheet_by_id(338938079)
+        Datatabell = ss.get_worksheet_by_id(worksheet_id)
 
         # Write the extracted prices to the sheet, starting from cell S27.
         column = column_name_to_index('S')
