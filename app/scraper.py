@@ -65,7 +65,8 @@ class GetPrices:
         driver.quit()
 
         # Authenticate with Google Sheets.
-        creds_file = Credentials.from_service_account_file('./creds.json', scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'])
+        scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+        creds_file = Credentials.from_service_account_file('./creds.json', scopes=scopes)
         client = gspread.authorize(creds_file)
 
         # Read the configuration file
