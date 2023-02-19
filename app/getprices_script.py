@@ -2,7 +2,7 @@ from scraper import GetPrices
 from enum import Enum
 from helpers import Helper
 import os
-import time
+import platform
 
 class Of(Enum):
     FFR=1,
@@ -48,9 +48,17 @@ if not os.path.exists(config_file_path):
 ffr = GetPrices(Of.FFR, source=Source.mgex)
 
 #If started for the first time, setup the LaunchAgent.
-if not eval(ffr.config["LaunchAgent"]["exists"]):
-    print("No LaunchAgent detected. Setting up.")
-    helper.setup_launch_agent()
+
+# For MacOS:
+if platform.system() == "Darwin":
+    if not eval(ffr.config["LaunchAgent"]["exists"]):
+        print("No LaunchAgent detected. Setting up.")
+        helper.setup_launch_agent()
+
+# For Windows:
+if platform.system() == "Windows":
+    print("No functionality for Task Scheduler on Windows is currently available. If you want to run this script every n minutes, please go to Task Scheduler and create a new task for it.")
+
     
 
 ffr.start()
