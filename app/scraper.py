@@ -35,37 +35,51 @@ class GetPrices:
         # Det ska vara såhär när det är klart:
         # Hämta alla tickers från https://www.mgex.com/data_charts.html?j1_module=futureMarketOverview&j1_root=ZQ&j1_section=financials&
         # och ladda in dem i listan. Låt användaren vilja vilka som ska vara kvar.
-        tickers = {"ZQH25":"ZQH25"}
+        tickers = {ticker: ticker for ticker in ["ZQH25", "ZQJ25", "ZQK25", "ZQM25", "ZQN25", "ZQQ25", "ZQU25", "ZQV25", "ZQX25", "ZQZ25"]}
+        price_list = []
 
-        try:
-            # Navigate to the website
-            # Jag behöver loopa igenom listan med tickers och för varje ticker ska jag hämta priset och spara priserna i en prislista som jag sedan skriver ut i min range i sheeten.
-            futureDetail = "https://www.mgex.com/quotes.html?j1_module=futureDetail&j1_symbol=" + tickers["ZQH25"] + "&j1_override=&j1_region="
-            driver.get(futureDetail)
+        for ticker in tickers.values():
+            try:
+                # Navigate to the URL with the current ticker.
+                futureDetail = "https://www.mgex.com/quotes.html?j1_module=futureDetail&j1_symbol=" + ticker + "&j1_override=&j1_region="
+                driver.get(futureDetail)
 
-            # Find the element by XPATH
-            element = driver.find_element(By.XPATH, "//*[@id=\"futureDetail\"]/div[2]/div[2]/div[1]")
-            
-            # Delete the "s" at the end and the dollar sign in the beginning. Convert the result to a float.
-            text = float(element.text.replace("s", "").replace("$", ""))
+                # Find the element by XPATH
+                element = driver.find_element(By.XPATH, "//*[@id=\"futureDetail\"]/div[2]/div[2]/div[1]")
+                
+                # Delete the "s" at the end and the dollar sign in the beginning. Convert the result to a float.
+                found = float(element.text.replace("s", "").replace("$", ""))
+                price_list.append(found)
 
-            # Print the extracted text and the type.
-            print(text)
-            print(type(text))
-        finally:
-            # Close the driver
-            driver.quit()
+                # Print the extracted text and the type.
+                print(ticker, found)
+                print(type(found))
+            except:
+                print(f"Error retrieving price for {ticker}")
 
-        # Authenticate with Google Sheets
+        # Print the price list to verify the results.
+        print(price_list)
+
+        # Close the webdriver.
+        driver.quit()
+
+        # Authenticate with Google Sheets.
         creds_file = Credentials.from_service_account_file('./creds.json', scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'])
-        print(creds_file.has_scopes("https://www.googleapis.com/auth/spreadsheets"))
         client = gspread.authorize(creds_file)
 
         # Open the sheet and get the first worksheet
         ss = client.open('Placeringar')
         Datatabell = ss.get_worksheet_by_id(338938079)
 
-        # Write the extracted text to cell S27
+        # Write the extracted prices to the sheet, starting from cell S27.
         column = column_name_to_index('S')
-        row = 27
-        Datatabell.update_cell(row, column, text)
+        #column = "S"
+        start_row = 27
+        end_row = start_row + len(price_list) - 1
+
+        cell_range = Datatabell.range(start_row, column, end_row, column)
+
+        for i in range(len(price_list)):
+            cell_range[i].value = price_list[i]
+
+        Datatabell.update_cells(cell_range)
