@@ -4,7 +4,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 import gspread
 from google.oauth2.service_account import Credentials
-import configparser
 from helpers import column_name_to_index, Helper
 
 # Program
@@ -15,6 +14,8 @@ class GetPrices:
         self.source=source
         self.helper=Helper()    # In case I need a helper for each instance. Otherwise, delete this in the
                                 #future.
+        # Read the configuration file
+        self.config = self.helper.config
         
         # If value is passed in the repopulate_from variable, initialize the instance with data from the previous
         # instance. The previous instance is thus recreated.
@@ -69,12 +70,8 @@ class GetPrices:
         creds_file = Credentials.from_service_account_file('./creds.json', scopes=scopes)
         client = gspread.authorize(creds_file)
 
-        # Read the configuration file
-        config = configparser.ConfigParser()
-        config.read('config.ini')
-
         # Get the worksheet ID from the configuration file
-        worksheet_id = int(config['Google']['worksheet_id'])
+        worksheet_id = int(self.config['Google']['worksheet_id'])
 
         # Open the sheet and get the first worksheet
         ss = client.open('Placeringar')

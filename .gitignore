@@ -1,4 +1,6 @@
 *.json
+*.ini
+*.plist
 .DS_Store
 .huskyrc.json
 out
