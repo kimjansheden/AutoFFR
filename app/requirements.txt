@@ -1,0 +1,4 @@
+selenium==4.7.2
+gspread==5.7.1
+google-auth==2.6.0
+configparser==5.2.0
