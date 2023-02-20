@@ -22,7 +22,7 @@ class Helper:
         # Get the current working directory.
         cwd = os.getcwd()
 
-        # Set the paths to the script and the .plist file
+        # Set the full paths to the script and the .plist file.
         script_path = os.path.join(cwd, "getprices_script.py")
         plist_path = os.path.join(cwd, label + ".plist")
 
