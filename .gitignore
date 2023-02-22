@@ -1,6 +1,7 @@
 *.json
 *.ini
 *.plist
+*.docx
 .DS_Store
 .huskyrc.json
 out
