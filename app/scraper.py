@@ -37,7 +37,7 @@ class GetPrices:
         # Det ska vara såhär när det är klart:
         # Hämta alla tickers från https://www.mgex.com/data_charts.html?j1_module=futureMarketOverview&j1_root=ZQ&j1_section=financials&
         # och ladda in dem i listan. Låt användaren vilja vilka som ska vara kvar.
-        tickers = {ticker: ticker for ticker in ["ZQH25", "ZQJ25", "ZQK25", "ZQM25", "ZQN25", "ZQQ25", "ZQU25", "ZQV25", "ZQX25", "ZQZ25"]}
+        tickers = {ticker: ticker for ticker in ["ZQV24" ,"ZQX24" ,"ZQZ24" ,"ZQF25" ,"ZQG25", "ZQH25", "ZQJ25", "ZQK25", "ZQM25", "ZQN25", "ZQQ25", "ZQU25", "ZQV25", "ZQX25", "ZQZ25"]}
         price_list = []
 
         for ticker in tickers.values():
@@ -67,6 +67,7 @@ class GetPrices:
 
         # Authenticate with Google Sheets.
         scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+
         creds_file = Credentials.from_service_account_file('./creds.json', scopes=scopes)
         client = gspread.authorize(creds_file)
 
@@ -77,10 +78,10 @@ class GetPrices:
         ss = client.open('Placeringar')
         Datatabell = ss.get_worksheet_by_id(worksheet_id)
 
-        # Write the extracted prices to the sheet, starting from cell S27.
+        # Write the extracted prices to the sheet, starting from cell S22.
         column = column_name_to_index('S')
         #column = "S"
-        start_row = 27
+        start_row = 22
         end_row = start_row + len(price_list) - 1
 
         cell_range = Datatabell.range(start_row, column, end_row, column)

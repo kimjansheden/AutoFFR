@@ -14,17 +14,22 @@ class Helper:
     def setup_launch_agent(self):
         import os
         import shutil
+        import subprocess
 
         # Define the label and interval for the LaunchAgent.
         label = "com.kimjansheden.auto-quotes"
         interval = 600 # Every 10 min for now, but user should decide.
 
-        # Get the current working directory.
-        cwd = os.getcwd()
+        # Get the script's directory.
+        script_dir = os.path.dirname(__file__)
 
         # Set the full paths to the script and the .plist file.
-        script_path = os.path.join(cwd, "getprices_script.py")
-        plist_path = os.path.join(cwd, label + ".plist")
+        script_path = os.path.abspath(os.path.join(script_dir, "getprices_script.py"))
+        #script_path = os.path.join(cwd, "getprices_script.py")
+        plist_path = os.path.join(script_dir, label + ".plist")
+
+        # Find the path to the user's installed version of Python3.
+        python3_path = subprocess.check_output(["which", "python3"]).strip().decode("utf-8")
 
         # Create the .plist file.
         with open(plist_path, "w") as f:
@@ -35,9 +40,11 @@ class Helper:
                 <dict>
                     <key>Label</key>
                     <string>{label}</string>
+                    <key>WorkingDirectory</key>
+                    <string>{script_dir}</string>
                     <key>ProgramArguments</key>
                     <array>
-                        <string>/usr/bin/python3</string>
+                        <string>{python3_path}</string>
                         <string>{script_path}</string>
                     </array>
                     <key>StartInterval</key>
