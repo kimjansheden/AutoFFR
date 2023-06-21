@@ -5,6 +5,8 @@ from selenium.webdriver.chrome.service import Service
 import gspread
 from google.oauth2.service_account import Credentials
 from helpers import column_name_to_index, Helper
+from webdriver_manager.chrome import ChromeDriverManager
+import os
 
 # Program
 
@@ -28,8 +30,8 @@ class GetPrices:
         options.add_argument('--headless')
 
         # Set up Selenium webdriver
-        driver_path = "./chromedriver"
-        service = Service(driver_path)
+        
+        service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
         driver.implicitly_wait(3)
 
@@ -81,7 +83,7 @@ class GetPrices:
         # Write the extracted prices to the sheet, starting from cell S22.
         column = column_name_to_index('S')
         #column = "S"
-        start_row = 22
+        start_row = 19
         end_row = start_row + len(price_list) - 1
 
         cell_range = Datatabell.range(start_row, column, end_row, column)
