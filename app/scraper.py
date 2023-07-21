@@ -1,11 +1,11 @@
 # Imports
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 import gspread
 from google.oauth2.service_account import Credentials
 from helpers import column_name_to_index, Helper
-from webdriver_manager.chrome import ChromeDriverManager
 import os
 
 # Program
@@ -25,14 +25,18 @@ class GetPrices:
             self.repopulate(tickers)
 
     def start(self):
-        # Disable the browser window opening, i.e. enable headless mode
-        options = webdriver.ChromeOptions()
+        # Set up Selenium webdriver
+
+        # Instantiate ChromeOptions object to customize the behavior of the browser.
+        options = Options()
+
+        # Add the '--headless' argument to the options. This disables the browser window opening.
+        # In other words, it enables "headless" mode, where the browser runs in the background without a visible window.
         options.add_argument('--headless')
 
-        # Set up Selenium webdriver
-        
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
+        # Create the Chrome WebDriver instance
+        driver = webdriver.Chrome(options=options)
+
         driver.implicitly_wait(3)
 
         # Load the tickers
