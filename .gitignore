@@ -8,6 +8,8 @@ out
 log.log
 **/node_modules
 *.pyc
+*.zip
+chromedriver
 *.vsix
 **/.vscode/.ropeproject/**
 **/testFiles/**/.cache/**

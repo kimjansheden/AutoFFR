@@ -30,12 +30,16 @@ class GetPrices:
         # Instantiate ChromeOptions object to customize the behavior of the browser.
         options = Options()
 
+        # Get the latest chromedriver
+        latest_from_json = self.helper.get_latest_from_json()
+        service = Service(latest_from_json)
+
         # Add the '--headless' argument to the options. This disables the browser window opening.
         # In other words, it enables "headless" mode, where the browser runs in the background without a visible window.
         options.add_argument('--headless')
 
         # Create the Chrome WebDriver instance
-        driver = webdriver.Chrome(options=options)
+        driver = webdriver.Chrome(options=options, service=service)
 
         driver.implicitly_wait(3)
 
