@@ -3,6 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import SessionNotCreatedException
 import gspread
 from google.oauth2.service_account import Credentials
 from helpers import column_name_to_index, Helper
@@ -30,16 +31,22 @@ class GetPrices:
         # Instantiate ChromeOptions object to customize the behavior of the browser.
         options = Options()
 
-        # Get the latest chromedriver
-        latest_from_json = self.helper.get_latest_from_json()
-        service = Service(latest_from_json)
-
         # Add the '--headless' argument to the options. This disables the browser window opening.
         # In other words, it enables "headless" mode, where the browser runs in the background without a visible window.
         options.add_argument('--headless')
 
         # Create the Chrome WebDriver instance
-        driver = webdriver.Chrome(options=options, service=service)
+        # Try first with Selenium built in function
+        try:
+            driver = webdriver.Chrome(options=options)
+
+        # Use JSON endpoint as fall-back method
+        except SessionNotCreatedException as e:
+            print(f"An SessionNotCreatedException was raised.\n\nTrying to download the latest version via Google's JSON Endpoint instead.")
+            # Get the latest chromedriver
+            latest_from_json = self.helper.get_latest_from_json()
+            service = Service(latest_from_json)
+            driver = webdriver.Chrome(options=options, service=service)
 
         driver.implicitly_wait(3)
 
