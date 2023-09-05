@@ -14,6 +14,7 @@ chromedriver
 **/.vscode/.ropeproject/**
 **/testFiles/**/.cache/**
 *.noseids
+foo.py
 .nyc_output
 .vscode-test
 __pycache__

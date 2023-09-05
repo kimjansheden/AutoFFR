@@ -4,6 +4,9 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import SessionNotCreatedException
+
+from bs4 import BeautifulSoup
+
 import gspread
 from google.oauth2.service_account import Credentials
 from helpers import column_name_to_index, Helper
@@ -12,20 +15,16 @@ import os
 # Program
 
 class GetPrices:
-    def __init__(self, of: enumerate, tickers="", source="mgex"):
+    def __init__(self, of: enumerate, tickers="all", source="MGEX"):
         self.of=of
-        self.source=source
-        self.helper=Helper()    # In case I need a helper for each instance. Otherwise, delete this in the
-                                #future.
+        self.tickers = tickers
+        self.helper=Helper()    
+        
         # Read the configuration file
         self.config = self.helper.config
-        
-        # If value is passed in the repopulate_from variable, initialize the instance with data from the previous
-        # instance. The previous instance is thus recreated.
-        if tickers != "":
-            self.repopulate(tickers)
 
-    def start(self):
+        self.source: str = self.config['Sources'][source]
+
         # Set up Selenium webdriver
 
         # Instantiate ChromeOptions object to customize the behavior of the browser.
@@ -38,7 +37,7 @@ class GetPrices:
         # Create the Chrome WebDriver instance
         # Try first with Selenium built in function
         try:
-            driver = webdriver.Chrome(options=options)
+            self.driver = webdriver.Chrome(options=options)
 
         # Use JSON endpoint as fall-back method
         except SessionNotCreatedException as e:
@@ -46,25 +45,23 @@ class GetPrices:
             # Get the latest chromedriver
             latest_from_json = self.helper.get_latest_from_json()
             service = Service(latest_from_json)
-            driver = webdriver.Chrome(options=options, service=service)
+            self.driver = webdriver.Chrome(options=options, service=service)
 
-        driver.implicitly_wait(3)
+    def start(self):
+        self.driver.implicitly_wait(3)
 
         # Load the tickers
-        # Det ska vara såhär när det är klart:
-        # Hämta alla tickers från https://www.mgex.com/data_charts.html?j1_module=futureMarketOverview&j1_root=ZQ&j1_section=financials&
-        # och ladda in dem i listan. Låt användaren vilja vilka som ska vara kvar.
-        tickers = {ticker: ticker for ticker in ["ZQV24" ,"ZQX24" ,"ZQZ24" ,"ZQF25" ,"ZQG25", "ZQH25", "ZQJ25", "ZQK25", "ZQM25", "ZQN25", "ZQQ25", "ZQU25", "ZQV25", "ZQX25", "ZQZ25"]}
+        tickers = self.get_tickers(self.tickers)
         price_list = []
 
-        for ticker in tickers.values():
+        for ticker in tickers:
             try:
                 # Navigate to the URL with the current ticker.
                 futureDetail = "https://www.mgex.com/quotes.html?j1_module=futureDetail&j1_symbol=" + ticker + "&j1_override=&j1_region="
-                driver.get(futureDetail)
+                self.driver.get(futureDetail)
 
                 # Find the element by XPATH
-                element = driver.find_element(By.XPATH, "//*[@id=\"futureDetail\"]/div[2]/div[2]/div[1]")
+                element = self.driver.find_element(By.XPATH, "//*[@id=\"futureDetail\"]/div[2]/div[2]/div[1]")
                 
                 # Delete the "s" at the end and the dollar sign in the beginning. Convert the result to a float.
                 found = float(element.text.replace("s", "").replace("$", ""))
@@ -73,14 +70,14 @@ class GetPrices:
                 # Print the extracted text and the type.
                 print(ticker, found)
                 print(type(found))
-            except:
-                print(f"Error retrieving price for {ticker}")
+            except Exception as e:
+                print(f"Error retrieving price for {ticker}. {e}")
 
         # Print the price list to verify the results.
         print(price_list)
 
         # Close the webdriver.
-        driver.quit()
+        self.driver.quit()
 
         # Authenticate with Google Sheets.
         scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
@@ -97,8 +94,7 @@ class GetPrices:
 
         # Write the extracted prices to the sheet, starting from cell S22.
         column = column_name_to_index('S')
-        #column = "S"
-        start_row = 19
+        start_row = 4
         end_row = start_row + len(price_list) - 1
 
         cell_range = Datatabell.range(start_row, column, end_row, column)
@@ -107,3 +103,29 @@ class GetPrices:
             cell_range[i].value = price_list[i]
 
         Datatabell.update_cells(cell_range)
+    
+    def get_tickers(self, tickers):
+        if tickers == "all":
+            self.driver.get(self.source)
+
+            page_source = self.driver.page_source
+
+            soup = BeautifulSoup(page_source, "html.parser")
+            ticker_tags = soup.select(".table.table-striped tbody tr td.text-left")
+
+            seen = set()  # This set keeps track of tickers we've already added
+
+            tickers = []
+            for link in ticker_tags:
+                ticker_link = link.find("a")
+                if ticker_link:
+                    ticker_text = ticker_link.text.strip()
+                ticker = ticker_text.split(" ")[0]
+                
+                # Only add this ticker if we haven't added it before
+                if ticker not in seen:
+                    tickers.append(ticker)
+                    seen.add(ticker)
+            
+            print(tickers)
+            return tickers
