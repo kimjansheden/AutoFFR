@@ -10,8 +10,8 @@ from bs4 import BeautifulSoup
 import gspread
 from google.oauth2.service_account import Credentials
 from helpers import column_name_to_index, Helper
-import os
-import requests
+from datetime import datetime
+import locale
 
 # Program
 
@@ -169,9 +169,27 @@ class GetPrices:
         cell_range_prices = Datatabell.range(start_row, column_price, end_row, column_price)
         cell_range_months = Datatabell.range(start_row, column_month, end_row, column_month)
 
+        # Mapping from English month abbreviations to Swedish month names
+        month_mapping = {
+        "Jan": "januari", "Feb": "februari", "Mar": "mars",
+        "Apr": "april", "May": "maj", "Jun": "juni",
+        "Jul": "juli", "Aug": "augusti", "Sep": "september",
+        "Oct": "oktober", "Nov": "november", "Dec": "december"
+        }
+
         for i in range(len(self.price_list)):
             cell_range_prices[i].value = self.price_list[i]
-            cell_range_months[i].value = self.tickers_list[i]
+            
+            ticker = self.tickers_list[i]
+            if ticker[0].isalpha():  # Check if the string starts with a letter
+                month_abbr, year_suffix = ticker.split('\xa0')
+                year = "20" + year_suffix  # Convert to full year
+                # Get Swedish month name from the mapping
+                month_name = month_mapping.get(month_abbr, "")
+                formatted_date = f"1 {month_name} {year}"
+                cell_range_months[i].value = formatted_date
+            else:
+                cell_range_months[i].value = ticker
 
         Datatabell.update_cells(cell_range_prices)
         Datatabell.update_cells(cell_range_months)
