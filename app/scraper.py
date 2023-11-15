@@ -11,14 +11,19 @@ import gspread
 from google.oauth2.service_account import Credentials
 from helpers import column_name_to_index, Helper
 import os
+import requests
 
 # Program
 
 class GetPrices:
-    def __init__(self, of: enumerate, tickers="all", source="MGEX"):
+    def __init__(self, of: enumerate, tickers_to_get="all", source="MGEX"):
         self.of=of
-        self.tickers = tickers
-        self.helper=Helper()    
+        self.tickers_to_get = tickers_to_get
+        self.helper=Helper()
+        self.page_source = None
+        self.source_name = source
+        self.price_list = []
+        self.tickers_list = []
         
         # Read the configuration file
         self.config = self.helper.config
@@ -46,71 +51,27 @@ class GetPrices:
             latest_from_json = self.helper.get_latest_from_json()
             service = Service(latest_from_json)
             self.driver = webdriver.Chrome(options=options, service=service)
+        
+        self.driver.get(self.source)
+        self.page_source = self.driver.page_source
 
     def start(self):
         self.driver.implicitly_wait(3)
 
-        # Load the tickers
-        tickers = self.get_tickers(self.tickers)
-        price_list = []
-
-        for ticker in tickers:
-            try:
-                # Navigate to the URL with the current ticker.
-                futureDetail = "https://www.mgex.com/quotes.html?j1_module=futureDetail&j1_symbol=" + ticker + "&j1_override=&j1_region="
-                self.driver.get(futureDetail)
-
-                # Find the element by XPATH
-                element = self.driver.find_element(By.XPATH, "//*[@id=\"futureDetail\"]/div[2]/div[2]/div[1]")
-                
-                # Delete the "s" at the end and the dollar sign in the beginning. Convert the result to a float.
-                found = float(element.text.replace("s", "").replace("$", ""))
-                price_list.append(found)
-
-                # Print the extracted text and the type.
-                print(ticker, found)
-                print(type(found))
-            except Exception as e:
-                print(f"Error retrieving price for {ticker}. {e}")
-
-        # Print the price list to verify the results.
-        print(price_list)
-
-        # Close the webdriver.
-        self.driver.quit()
-
-        # Authenticate with Google Sheets.
-        scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-
-        creds_file = Credentials.from_service_account_file('./creds.json', scopes=scopes)
-        client = gspread.authorize(creds_file)
-
-        # Get the worksheet ID from the configuration file
-        worksheet_id = int(self.config['Google']['worksheet_id'])
-
-        # Open the sheet and get the first worksheet
-        ss = client.open('Placeringar')
-        Datatabell = ss.get_worksheet_by_id(worksheet_id)
-
-        # Write the extracted prices to the sheet, starting from cell S22.
-        column = column_name_to_index('S')
-        start_row = 4
-        end_row = start_row + len(price_list) - 1
-
-        cell_range = Datatabell.range(start_row, column, end_row, column)
-
-        for i in range(len(price_list)):
-            cell_range[i].value = price_list[i]
-
-        Datatabell.update_cells(cell_range)
+        if self.source_name == "MGEX":
+            print(f"Getting prices from {self.source_name}")
+            self.get_mgex()
+        elif self.source_name == "INVESTING":
+            print(f"Getting prices from {self.source_name}")
+            self.get_investing()
+        else:
+            print("No valid source detected. Quitting.")
+        
+        self.update_gsheets()
     
-    def get_tickers(self, tickers):
-        if tickers == "all":
-            self.driver.get(self.source)
-
-            page_source = self.driver.page_source
-
-            soup = BeautifulSoup(page_source, "html.parser")
+    def get_tickers(self, tickers_to_get, source="MGEX"):
+        if tickers_to_get == "all":
+            soup = BeautifulSoup(self.page_source, "html.parser")
             ticker_tags = soup.select(".table.table-striped tbody tr td.text-left")
 
             seen = set()  # This set keeps track of tickers we've already added
@@ -129,3 +90,88 @@ class GetPrices:
             
             print(tickers)
             return tickers
+        
+    def get_mgex(self):
+        # Load the tickers
+        tickers = self.get_tickers(tickers_to_get=self.tickers_to_get, source=self.source_name)
+        for ticker in tickers:
+            try:
+                # Navigate to the URL with the current ticker.
+                futureDetail = "https://www.mgex.com/quotes.html?j1_module=futureDetail&j1_symbol=" + ticker + "&j1_override=&j1_region="
+                self.driver.get(futureDetail)
+
+                # Find the element by XPATH
+                element = self.driver.find_element(By.XPATH, "//*[@id=\"futureDetail\"]/div[2]/div[2]/div[1]")
+                
+                # Delete the "s" at the end and the dollar sign in the beginning. Convert the result to a float.
+                found = float(element.text.replace("s", "").replace("$", ""))
+                self.price_list.append(found)
+
+                # Print the extracted text and the type.
+                print(ticker, found)
+                print(type(found))
+            except Exception as e:
+                print(f"Error retrieving price for {ticker}. {e}")
+
+        # Print the price list to verify the results.
+        print(self.price_list)
+
+        # Close the webdriver.
+        self.driver.quit()
+
+    def get_investing(self):
+        soup = BeautifulSoup(self.page_source, "html.parser")
+
+        # Find the table with the id 'BarchartDataTable'
+        table = soup.find('table', {'id': 'BarchartDataTable'})
+
+        # Extract all the rows within the table
+        rows = table.find_all('tr')
+
+        # Loop through each row to find and extract data
+        for row in rows:
+            # Find all cells in each row
+            cells = row.find_all('td')
+
+            if len(cells) > 2:  # Make sure the row has enough cells
+                month = cells[1].text.strip()  # The month is in the second cell
+                price = cells[2].text.strip()  # The price is in the third cell
+
+                price = price.replace("s", "").replace(".", ",")
+
+                print(month, price)
+                self.price_list.append(price)
+                self.tickers_list.append(month)
+
+        # Close the webdriver.
+        self.driver.quit()
+    
+    def update_gsheets(self):
+        # Authenticate with Google Sheets.
+        scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+
+        creds_file = Credentials.from_service_account_file('./creds.json', scopes=scopes)
+        client = gspread.authorize(creds_file)
+
+        # Get the worksheet ID from the configuration file
+        worksheet_id = int(self.config['Google']['worksheet_id'])
+
+        # Open the sheet and get the first worksheet
+        ss = client.open('Placeringar')
+        Datatabell = ss.get_worksheet_by_id(worksheet_id)
+
+        # Write the extracted prices to the sheet, starting from cell S22.
+        column_price = column_name_to_index('S')
+        column_month = column_name_to_index('P')
+        start_row = 4
+        end_row = start_row + len(self.price_list) - 1
+
+        cell_range_prices = Datatabell.range(start_row, column_price, end_row, column_price)
+        cell_range_months = Datatabell.range(start_row, column_month, end_row, column_month)
+
+        for i in range(len(self.price_list)):
+            cell_range_prices[i].value = self.price_list[i]
+            cell_range_months[i].value = self.tickers_list[i]
+
+        Datatabell.update_cells(cell_range_prices)
+        Datatabell.update_cells(cell_range_months)

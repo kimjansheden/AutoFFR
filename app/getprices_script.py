@@ -2,6 +2,7 @@ from scraper import GetPrices
 from enum import Enum
 from helpers import Helper
 import os
+import sys
 import platform
 
 class Of(Enum):
@@ -16,6 +17,7 @@ class Of(Enum):
 
 class Source(Enum):
     MGEX=1
+    INVESTING=2
 
     def __str__(self):
         return self.name
@@ -43,8 +45,10 @@ if not os.path.exists(config_file_path):
     with open(config_file_path, "w") as f:
         config.write(f)
 
+source_arg = sys.argv[1].upper() if len(sys.argv) > 1 else "INVESTING"
+
 # Initialize the scraper object
-ffr = GetPrices(Of.FFR, source=Source.MGEX.name)
+ffr = GetPrices(Of.FFR, source=Source[source_arg].name)
 
 #If started for the first time, setup the LaunchAgent.
 
