@@ -52,8 +52,13 @@ class GetPrices:
             service = Service(latest_from_json)
             self.driver = webdriver.Chrome(options=options, service=service)
         
-        self.driver.get(self.source)
-        self.page_source = self.driver.page_source
+        try:
+            print(f"Surfing to page {self.source} …")
+            self.driver.get(self.source)
+            self.page_source = self.driver.page_source
+            # print(self.page_source)
+        except Exception as e:
+            print("Error:", e)
 
     def start(self):
         self.driver.implicitly_wait(3)
