@@ -8,6 +8,7 @@ from selenium.common.exceptions import SessionNotCreatedException
 from bs4 import BeautifulSoup
 
 import gspread
+from gspread.utils import ValueInputOption
 from google.oauth2.service_account import Credentials
 from helpers import column_name_to_index, Helper
 from datetime import datetime
@@ -165,14 +166,21 @@ class GetPrices:
         ss = client.open('Placeringar')
         Datatabell = ss.get_worksheet_by_id(worksheet_id)
 
+        column_month_letter = 'P'
+
         # Write the extracted prices to the sheet, starting from cell S22.
+        column_date = column_name_to_index('O')
         column_price = column_name_to_index('S')
-        column_month = column_name_to_index('P')
+        column_month = column_name_to_index(column_month_letter)
+        
         start_row = 4
         end_row = start_row + len(self.price_list) - 1
 
+        current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         cell_range_prices = Datatabell.range(start_row, column_price, end_row, column_price)
         cell_range_months = Datatabell.range(start_row, column_month, end_row, column_month)
+        cell_range_dates = Datatabell.range(start_row, column_date, end_row, column_date)
 
         # Mapping from English month abbreviations to Swedish month names
         month_mapping = {
@@ -182,19 +190,37 @@ class GetPrices:
         "Oct": "oktober", "Nov": "november", "Dec": "december"
         }
 
+        # Mapping from month abbreviations to full English month names
+        month_abbr_to_full = {
+            "Jan": "January", "Feb": "February", "Mar": "March",
+            "Apr": "April", "May": "May", "Jun": "June",
+            "Jul": "July", "Aug": "August", "Sep": "September",
+            "Oct": "October", "Nov": "November", "Dec": "December"
+        }
+
         for i in range(len(self.price_list)):
             cell_range_prices[i].value = self.price_list[i]
+            cell_range_dates[i].value = current_datetime
             
             ticker = self.tickers_list[i]
             if ticker[0].isalpha():  # Check if the string starts with a letter
                 month_abbr, year_suffix = ticker.split('\xa0')
                 year = "20" + year_suffix  # Convert to full year
-                # Get Swedish month name from the mapping
-                month_name = month_mapping.get(month_abbr, "")
-                formatted_date = f"1 {month_name} {year}"
+
+                # # Get Swedish month name from the mapping
+                # month_name = month_mapping.get(month_abbr, "")
+
+                # Convert month abbreviation to full name
+                month_full = month_abbr_to_full.get(month_abbr, "")
+                
+                formatted_date = datetime.strptime(f"1 {month_full} {year}", "%d %B %Y").strftime("%Y-%m-%d")
+                
                 cell_range_months[i].value = formatted_date
             else:
                 cell_range_months[i].value = ticker
 
         Datatabell.update_cells(cell_range_prices)
-        Datatabell.update_cells(cell_range_months)
+        Datatabell.update_cells(cell_range_months, ValueInputOption.user_entered)
+        Datatabell.update_cells(cell_range_dates, ValueInputOption.user_entered)
+
+        Datatabell.format(f"{column_month_letter}4:{column_month_letter}{end_row}", {"numberFormat": {"type": "DATE", "pattern": "mmmm yyyy"}})
