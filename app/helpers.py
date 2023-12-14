@@ -35,7 +35,7 @@ class Helper:
         plist_path = os.path.join(script_dir, label + ".plist")
 
         # Find the path to the user's installed version of Python3.
-        python3_path = subprocess.check_output(["which", "python3"]).strip().decode("utf-8")
+        python_path = subprocess.check_output(["which", "python"]).strip().decode("utf-8")
 
         # Create the .plist file.
         with open(plist_path, "w") as f:
@@ -50,7 +50,7 @@ class Helper:
                     <string>{script_dir}</string>
                     <key>ProgramArguments</key>
                     <array>
-                        <string>{python3_path}</string>
+                        <string>{python_path}</string>
                         <string>{script_path}</string>
                     </array>
                     <key>StartInterval</key>
