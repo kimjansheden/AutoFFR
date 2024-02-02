@@ -1,45 +1,45 @@
 import configparser
 import os
-import subprocess
-import requests
 import re
-import zipfile
+import shutil
 import stat
+import subprocess
+import sys
+import zipfile
+import requests
+import os
+import subprocess
+
 
 class Helper:
     def __init__(self):
         # Read the configuration file
         self.config = configparser.ConfigParser()
-        self.config.read('config.ini')
-
-    # In case I want to access the method through the class.
-    # If not, this can be deleted in the future.
-    def column_name_to_index(self, column_name):
-        return column_name_to_index(column_name)
+        self.config.read("config.ini")
 
     def setup_launch_agent(self):
-        import os
-        import shutil
-        import subprocess
-
         # Define the label and interval for the LaunchAgent.
         label = "com.kimjansheden.auto-quotes"
-        interval = 600 # Every 10 min for now, but user should decide.
+        interval = 600  # Every 10 min for now, but user should decide.
 
         # Get the script's directory.
         script_dir = os.path.dirname(__file__)
 
         # Set the full paths to the script and the .plist file.
         script_path = os.path.abspath(os.path.join(script_dir, "getprices_script.py"))
-        #script_path = os.path.join(cwd, "getprices_script.py")
         plist_path = os.path.join(script_dir, label + ".plist")
 
-        # Find the path to the user's installed version of Python3.
-        python_path = subprocess.check_output(["which", "python"]).strip().decode("utf-8")
+        # Find the path to the Python interpreter running this script.
+        python_path = sys.executable
+
+        # Prepare the EnvironmentVariables string.
+        # Replace 'your_path_here' with the desired value.
+        env_vars = f"/usr/bin:/bin:/usr/sbin:/sbin:{python_path}"
 
         # Create the .plist file.
         with open(plist_path, "w") as f:
-            f.write(f"""<?xml version="1.0" encoding="UTF-8"?>
+            f.write(
+                f"""<?xml version="1.0" encoding="UTF-8"?>
             <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
                 "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
             <plist version="1.0">
@@ -55,9 +55,15 @@ class Helper:
                     </array>
                     <key>StartInterval</key>
                     <integer>{interval}</integer>
+                    <key>EnvironmentVariables</key>
+                    <dict>
+                        <key>PATH</key>
+                        <string>{env_vars}</string>
+                    </dict>
                 </dict>
             </plist>
-            """)
+            """
+            )
 
         # Move the .plist file to the LaunchAgents directory.
         launch_agents_dir = os.path.expanduser("~/Library/LaunchAgents")
@@ -73,7 +79,7 @@ class Helper:
         # Write the updated config to the config file.
         with open("config.ini", "w") as f:
             self.config.write(f)
-        
+
         print("LaunchAgent setup was successful.")
 
     def _get_chrome_version(self, pattern):
@@ -83,19 +89,23 @@ class Helper:
         chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
         # Run the command to fetch the version
-        chrome_version_result = subprocess.run([chrome_path, "--version"], stdout=subprocess.PIPE)
+        chrome_version_result = subprocess.run(
+            [chrome_path, "--version"], stdout=subprocess.PIPE
+        )
 
         # Print and return the version
         if chrome_version_result.returncode == 0:
-            chrome_version_decoded = chrome_version_result.stdout.decode('utf-8').strip()
+            chrome_version_decoded = chrome_version_result.stdout.decode(
+                "utf-8"
+            ).strip()
 
             chrome_version = re.search(pattern, chrome_version_decoded).group()
-            print(f'Chrome Version: {chrome_version}')
+            print(f"Chrome Version: {chrome_version}")
             return chrome_version
         else:
-            print('Failed to retrieve Chrome version.')
+            print("Failed to retrieve Chrome version.")
             return None
-        
+
     def _get_chromedriver_version(self, pattern, chromedriver_path):
         print("Retrieving ChromeDriver Version")
 
@@ -103,11 +113,17 @@ class Helper:
         if os.path.exists(chromedriver_path):
             print("Chromedriver is downloaded. Checking version.")
 
-            chromedriver_version_result = subprocess.run([chromedriver_path, '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            chromedriver_version_result = subprocess.run(
+                [chromedriver_path, "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
             # Print and return the version
             if chromedriver_version_result.returncode == 0:
-                chromedriver_decoded = chromedriver_version_result.stdout.decode('utf-8').strip()
+                chromedriver_decoded = chromedriver_version_result.stdout.decode(
+                    "utf-8"
+                ).strip()
 
                 chromedriver_version = re.search(pattern, chromedriver_decoded).group()
                 print(f"ChromeDriver Version: {chromedriver_version}")
@@ -118,7 +134,7 @@ class Helper:
         else:
             print("ChromeDriver is not downloaded.")
             return None
-            
+
     def _check_if_current(self, chrome_version, chromedriver_version):
         print("Checking if chromedriver is the latest version.")
         if chromedriver_version == chrome_version:
@@ -127,7 +143,7 @@ class Helper:
         else:
             print("Your version of ChromeDriver is outdated or missing.")
             return False
-        
+
     def _download_and_extract_chromedriver(self, chromedriver_path):
         # Desired channel and platform
         channel = "Stable"
@@ -153,23 +169,27 @@ class Helper:
 
             # Download the ZIP file
             response = requests.get(download_url)
-            
+
             # Save the ZIP file to disk
             zip_path = "chromedriver.zip"
             with open(zip_path, "wb") as file:
                 file.write(response.content)
 
             # Unpack the ZIP file
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall("chromedriver")
 
             # Give the file permission to run for all users
             os.chmod(chromedriver_path, stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
-            print(f"ChromeDriver has been downloaded and successfully extracted to {os.path.abspath(chromedriver_path)}")
+            print(
+                f"ChromeDriver has been downloaded and successfully extracted to {os.path.abspath(chromedriver_path)}"
+            )
             return True
         else:
-            print(f"Could not find ChromeDriver for the platform {platform} in the channel {channel}.")
+            print(
+                f"Could not find ChromeDriver for the platform {platform} in the channel {channel}."
+            )
             return False
 
     def get_latest_from_json(self):
@@ -184,21 +204,25 @@ class Helper:
         pattern = r"\d+\.\d+\.\d+\.\d+"
 
         # Path to the extracted ChromeDriver
-        chromedriver_path = os.path.join("chromedriver", "chromedriver-mac-arm64", "chromedriver")
+        chromedriver_path = os.path.join(
+            "chromedriver", "chromedriver-mac-arm64", "chromedriver"
+        )
         chromedriver_path_abs = os.path.abspath(chromedriver_path)
 
         # Get Chrome Version
         chrome_version = self._get_chrome_version(pattern)
-        
-        # Get ChromeDriver Version
-        chromedriver_version = self._get_chromedriver_version(pattern, chromedriver_path)
 
-        #Check if ChromeDriver is the latest version
+        # Get ChromeDriver Version
+        chromedriver_version = self._get_chromedriver_version(
+            pattern, chromedriver_path
+        )
+
+        # Check if ChromeDriver is the latest version
         is_current = self._check_if_current(chrome_version, chromedriver_version)
-        
+
         if is_current:
             return chromedriver_path_abs
-        
+
         # If not latest version
         success = self._download_and_extract_chromedriver(chromedriver_path)
 
@@ -206,30 +230,31 @@ class Helper:
             return chromedriver_path_abs
         return None
 
+
 def column_name_to_index(column_name):
-        """
-        Converts an alphanumeric column name to a numeric index.
+    """
+    Converts an alphanumeric column name to a numeric index.
 
-        Parameters:
-            column_name (str): A string representing an alphanumeric column name, e.g. "A", "B", "AA", "AB", etc.
+    Parameters:
+        column_name (str): A string representing an alphanumeric column name, e.g. "A", "B", "AA", "AB", etc.
 
-        Returns:
-            int: The numeric index of the column, where the first column "A" has index 1, "B" has index 2, etc.
+    Returns:
+        int: The numeric index of the column, where the first column "A" has index 1, "B" has index 2, etc.
 
-        Raises:
-            ValueError: If the input column_name is not a valid alphanumeric column name.
+    Raises:
+        ValueError: If the input column_name is not a valid alphanumeric column name.
 
-        Examples:
-            >>> column_name_to_index("A")
-            1
-            >>> column_name_to_index("S")
-            19
-            >>> column_name_to_index("ZZ")
-            702
-        """
-        index = 0
-        for i, c in enumerate(reversed(column_name)):
-            if not c.isalpha():
-                raise ValueError(f"{column_name} is not a valid column name")
-            index += (ord(c.upper()) - ord('A') + 1) * (26 ** i)
-        return index
+    Examples:
+        >>> column_name_to_index("A")
+        1
+        >>> column_name_to_index("S")
+        19
+        >>> column_name_to_index("ZZ")
+        702
+    """
+    index = 0
+    for i, c in enumerate(reversed(column_name)):
+        if not c.isalpha():
+            raise ValueError(f"{column_name} is not a valid column name")
+        index += (ord(c.upper()) - ord("A") + 1) * (26**i)
+    return index
