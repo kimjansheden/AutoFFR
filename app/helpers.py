@@ -13,9 +13,10 @@ import subprocess
 
 class Helper:
     def __init__(self):
-        # Read the configuration file
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.config_file_path = os.path.join(self.script_dir, "config.ini")
         self.config = configparser.ConfigParser()
-        self.config.read("config.ini")
+        self.config.read(self.config_file_path)
 
     def setup_launch_agent(self):
         # Define the label and interval for the LaunchAgent.
@@ -33,7 +34,6 @@ class Helper:
         python_path = sys.executable
 
         # Prepare the EnvironmentVariables string.
-        # Replace 'your_path_here' with the desired value.
         env_vars = f"/usr/bin:/bin:/usr/sbin:/sbin:{python_path}"
 
         # Create the .plist file.

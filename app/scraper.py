@@ -1,4 +1,5 @@
 # Imports
+import os
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -26,9 +27,9 @@ class GetPrices:
         self.price_list = []
         self.tickers_list = []
         
-        # Read the configuration file
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.creds_file_path = os.path.join(self.script_dir, "creds.json")
         self.config = self.helper.config
-
         self.source: str = self.config['Sources'][source]
 
         # Set up Selenium webdriver
@@ -156,7 +157,7 @@ class GetPrices:
         # Authenticate with Google Sheets.
         scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 
-        creds_file = Credentials.from_service_account_file('./creds.json', scopes=scopes)
+        creds_file = Credentials.from_service_account_file(self.creds_file_path, scopes=scopes)
         client = gspread.authorize(creds_file)
 
         # Get the worksheet ID from the configuration file
