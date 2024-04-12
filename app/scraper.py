@@ -1,4 +1,5 @@
 # Imports
+from enum import Enum
 import os
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -18,7 +19,7 @@ import locale
 # Program
 
 class GetPrices:
-    def __init__(self, of: enumerate, tickers_to_get="all", source="MGEX"):
+    def __init__(self, of: Enum, tickers_to_get="all", source="MGEX"):
         self.of=of
         self.tickers_to_get = tickers_to_get
         self.helper=Helper()
@@ -51,7 +52,8 @@ class GetPrices:
             print(f"An SessionNotCreatedException was raised.\n\nTrying to download the latest version via Google's JSON Endpoint instead.")
             # Get the latest chromedriver
             latest_from_json = self.helper.get_latest_from_json()
-            service = Service(latest_from_json)
+            if latest_from_json:
+                service = Service(latest_from_json)
             self.driver = webdriver.Chrome(options=options, service=service)
         
         try:
@@ -77,7 +79,7 @@ class GetPrices:
         self.update_gsheets()
     
     def get_tickers(self, tickers_to_get, source="MGEX"):
-        if tickers_to_get == "all":
+        if tickers_to_get == "all" and self.page_source:
             soup = BeautifulSoup(self.page_source, "html.parser")
             ticker_tags = soup.select(".table.table-striped tbody tr td.text-left")
 
@@ -101,6 +103,9 @@ class GetPrices:
     def get_mgex(self):
         # Load the tickers
         tickers = self.get_tickers(tickers_to_get=self.tickers_to_get, source=self.source_name)
+        if not tickers:
+            print("No tickers found. Quitting.")
+            return
         for ticker in tickers:
             try:
                 # Navigate to the URL with the current ticker.
@@ -127,10 +132,17 @@ class GetPrices:
         self.driver.quit()
 
     def get_investing(self):
+        if not self.page_source:
+            print("No page source found. Quitting.")
+            return
         soup = BeautifulSoup(self.page_source, "html.parser")
 
         # Find the table with the id 'BarchartDataTable'
         table = soup.find('table', {'id': 'BarchartDataTable'})
+
+        if not table:
+            print("No table found. Quitting.")
+            return
 
         # Extract all the rows within the table
         rows = table.find_all('tr')
