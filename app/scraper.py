@@ -4,6 +4,8 @@ import os
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import SessionNotCreatedException
 
@@ -38,9 +40,8 @@ class GetPrices:
         # Instantiate ChromeOptions object to customize the behavior of the browser.
         options = Options()
 
-        # Add the '--headless' argument to the options. This disables the browser window opening.
-        # In other words, it enables "headless" mode, where the browser runs in the background without a visible window.
         options.add_argument('--headless')
+        options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
 
         # Create the Chrome WebDriver instance
         # Try first with Selenium built in function
@@ -135,7 +136,16 @@ class GetPrices:
         if not self.page_source:
             print("No page source found. Quitting.")
             return
+        
+        # Wait a few seconds and then click on the Accept buttin with button id="onetrust-accept-btn-handler"
+        accept_button = WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler")))
+        accept_button.click()
+
+        # Update page_source after we got rid of the cookies dialogue
+        self.page_source = self.driver.page_source
+
         soup = BeautifulSoup(self.page_source, "html.parser")
+        print(soup)
 
         # Find the table with the id 'BarchartDataTable'
         table = soup.find('table', {'id': 'BarchartDataTable'})
