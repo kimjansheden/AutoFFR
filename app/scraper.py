@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import SessionNotCreatedException
+from selenium.common.exceptions import SessionNotCreatedException, TimeoutException
 
 from bs4 import BeautifulSoup
 
@@ -137,15 +137,19 @@ class GetPrices:
             print("No page source found. Quitting.")
             return
         
-        # Wait a few seconds and then click on the Accept buttin with button id="onetrust-accept-btn-handler"
-        accept_button = WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler")))
-        accept_button.click()
+        try:
+            # Wait a few seconds and then click on the Accept buttin with button id="onetrust-accept-btn-handler"
+            print("Waiting for Accept button")
+            accept_button = WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler")))
+            accept_button.click()
 
-        # Update page_source after we got rid of the cookies dialogue
-        self.page_source = self.driver.page_source
+            # Update page_source after we got rid of the cookies dialogue
+            self.page_source = self.driver.page_source
+        except TimeoutException as e:
+            print("No Accept button found. Continuing.")
 
         soup = BeautifulSoup(self.page_source, "html.parser")
-        print(soup)
+        # print(soup)
 
         # Find the table with the id 'BarchartDataTable'
         table = soup.find('table', {'id': 'BarchartDataTable'})
